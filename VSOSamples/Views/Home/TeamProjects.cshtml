@@ -1,0 +1,18 @@
+﻿
+@{
+    ViewBag.Title = "TeamProjects";
+}
+
+<h2>TeamProjects</h2>
+
+<h3>Result message</h3>
+<p>@ViewBag.ResponseMessage</p>
+<h3>Response content</h3>
+<pre id="result">
+    @ViewBag.Response
+</pre>
+
+<script>
+    var jsonString = document.getElementById("result").innerText;
+    document.getElementById("result").innerText = JSON.stringify(JSON.parse(jsonString), null, 4);
+</script>
