@@ -178,6 +178,7 @@
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="Controllers\Demo6.HomeController.cs" />
     <Compile Include="Controllers\Demo5.HomeController.cs" />
     <Compile Include="Controllers\Demo4.HomeController.cs" />
     <Compile Include="Controllers\Demo3.HomeController.cs" />
