@@ -12,7 +12,7 @@ using ServiceStack.Redis;
 namespace VSOSamples.Controllers
 {
 #if DEMO3
-    public class HomeController : Controller
+    public partial class HomeController : Controller
     {
         public ActionResult Index()
         {
