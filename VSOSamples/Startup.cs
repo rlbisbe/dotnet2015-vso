@@ -8,7 +8,7 @@ namespace VSOSamples
     {
         public void Configuration(IAppBuilder app)
         {
-            
+            app.MapSignalR();
         }
     }
 }

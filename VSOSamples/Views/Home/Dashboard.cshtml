@@ -1,0 +1,29 @@
+﻿
+@{
+    ViewBag.Title = "TeamProjects";
+    Layout = null;
+}
+
+<h3>Messages</h3>
+<div id="messages"></div>
+<script src="@Url.Content("~/Scripts/jquery-1.10.2.min.js")"></script>
+<script src="@Url.Content("~/Scripts/jquery.signalR-2.2.0.min.js")"></script>
+<script src="@Url.Content("~/signalr/hubs")"></script>
+<script type="text/javascript">
+    $(function () {
+        // Declare a proxy to reference the hub.
+        var notifications = $.connection.notificationHub;
+
+        notifications.client.broadcastMessage = function (message) {
+            var encodedMsg = JSON.stringify(message, null, 4);
+            $('#messages').append('<pre>' + encodedMsg + '</pre>');
+        };
+
+        // Start the connection.
+        $.connection.hub.start();
+    });
+</script>
+
+
+
+
