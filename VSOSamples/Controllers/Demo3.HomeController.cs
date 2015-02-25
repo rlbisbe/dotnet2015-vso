@@ -14,10 +14,6 @@ namespace VSOSamples.Controllers
 #if DEMO3
     public partial class HomeController : Controller
     {
-        public ActionResult Index()
-        {
-            return View();
-        }
         public ActionResult LogIn()
         {
             var appId = "C792BE55-9DE9-4968-944C-7A2697FC1FE2";
@@ -30,42 +26,24 @@ namespace VSOSamples.Controllers
 
         public async Task<ActionResult> Callback()
         {
-
             using (var client = new HttpClient())
             {
-
-                var code = Request.Params["code"];
-                var redirectUri = "https://dotnetconference.local:44300/home/Callback";
-                var url = "https://app.vssps.visualstudio.com/oauth2/token";
-
                 var dataDictionary = new Dictionary<string, string>() { 
                     {"client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"},
                     {"client_assertion", "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6Im9PdmN6NU1fN3AtSGpJS2xGWHo5M3VfVjBabyJ9.eyJjaWQiOiJjNzkyYmU1NS05ZGU5LTQ5NjgtOTQ0Yy03YTI2OTdmYzFmZTIiLCJjc2kiOiJjN2Y4ZmZmMy0yNzE1LTRlZjQtOWRhMi1lMWJiM2E5NjQ0ZTciLCJuYW1laWQiOiIzMzljYmQxYi1iNmRkLTQzOGUtODE1OC0xODIzMjM4NTU3N2EiLCJpc3MiOiJhcHAudnNzcHMudmlzdWFsc3R1ZGlvLmNvbSIsImF1ZCI6ImFwcC52c3Nwcy52aXN1YWxzdHVkaW8uY29tIiwibmJmIjoxNDI0NjA0Mjc3LCJleHAiOjE0NTYxNDAyNzd9.wA1SuhNeUpR_Z69orvtWNFXBf5kslH1n3NW6Gr97YYsnsKuRP3DUzMsLn7fE6V_odMrS8lBUwFjoNKaZ37mS6Cf9ALCTGRAk1m4tpffiNQ4ovpC9Wp0NvpZB1pN_HTSNLO7dlBUs0CPwzRmh75DeI4Ghadr_w5JPrYhAWXQKvvS3bjMyi7ehr3f4rXVCWZt5tDRAFeDB6cLFrCuVv0pewHe86pSb_azJdibjmqeLn20fLRY6n1-n21wyMSl40VRDMHNs1yMBQ9IHsqRZ7Ct6DpXvMt19qkQ3UBeawc11_iZSZhsbSuwn1NlnO_55Dz24D35RAZII7MzM17F8kcgkyw"},
                     {"grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
-                    {"assertion", code},
-                    {"redirect_uri", redirectUri}
+                    {"assertion", Request.Params["code"]},
+                    {"redirect_uri", "https://dotnetconference.local:44300/home/Callback"}
                 };
 
                 var content = new FormUrlEncodedContent(dataDictionary);
 
-                HttpResponseMessage response = await client.PostAsync(url, content);
+                HttpResponseMessage response = await client.PostAsync("https://app.vssps.visualstudio.com/oauth2/token", content);
 
                 string responseResult = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
-                {
-                    var redisManager = new BasicRedisClientManager("localhost");
-                    using (var redis = redisManager.GetClient())
-                    {
-                        var redisCredentials = redis.As<Auth>();
-                        redisCredentials.FlushAll();
-
-                        var credentialResponse = JsonConvert.DeserializeObject<Auth>(responseResult);
-                        credentialResponse.generationTime = DateTime.UtcNow;
-
-                        redisCredentials.Store(credentialResponse);
-                    }
-                }
+                    SaveAuthInfo(responseResult);
                
                 ViewBag.ResponseMessage = response.ReasonPhrase.ToString();
                 ViewBag.Response = responseResult;
@@ -74,6 +52,40 @@ namespace VSOSamples.Controllers
         }
 
         public async Task<ActionResult> TeamProjects()
+        {
+            var authorizationInfo = LoadAuthInfo();
+
+            using (var client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
+                    authorizationInfo.access_token);
+
+                HttpResponseMessage response = 
+                    await client.GetAsync("https://rlbisbe.VisualStudio.com/DefaultCollection/_apis/projects?api-version=1.0");
+
+                ViewBag.ResponseMessage = response.ReasonPhrase.ToString();
+                ViewBag.Response = await response.Content.ReadAsStringAsync();
+                return View();
+            }
+        }
+
+        public Auth SaveAuthInfo(string result)
+        {
+            var redisManager = new BasicRedisClientManager("localhost");
+            using (var redis = redisManager.GetClient())
+            {
+                var redisCredentials = redis.As<Auth>();
+                redisCredentials.FlushAll();
+
+                var credentialResponse = JsonConvert.DeserializeObject<Auth>(result);
+                credentialResponse.generationTime = DateTime.UtcNow;
+
+                redisCredentials.Store(credentialResponse);
+
+                return credentialResponse;
+            }
+        }
+        public Auth LoadAuthInfo()
         {
             Auth authorizationInfo;
 
@@ -94,57 +106,29 @@ namespace VSOSamples.Controllers
                 authorizationInfo = RefreshToken(authorizationInfo.refresh_token).Result;
             }
 
-            using (var client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
-                    authorizationInfo.access_token);
-
-                HttpResponseMessage response = 
-                    await client.GetAsync("https://rlbisbe.VisualStudio.com/DefaultCollection/_apis/projects?api-version=1.0");
-
-                ViewBag.ResponseMessage = response.ReasonPhrase.ToString();
-                ViewBag.Response = await response.Content.ReadAsStringAsync();
-                return View();
-            }
+            return authorizationInfo;
         }
 
         private async Task<Auth> RefreshToken(string refreshToken)
         {
             using (var client = new HttpClient())
             {
-                var redirectUri = "https://dotnetconference.local:44300/home/Callback";
-                var url = "https://app.vssps.visualstudio.com/oauth2/token";
-
                 var dataDictionary = new Dictionary<string, string>() { 
                     {"client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"},
                     {"client_assertion", "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6Im9PdmN6NU1fN3AtSGpJS2xGWHo5M3VfVjBabyJ9.eyJjaWQiOiJjNzkyYmU1NS05ZGU5LTQ5NjgtOTQ0Yy03YTI2OTdmYzFmZTIiLCJjc2kiOiJjN2Y4ZmZmMy0yNzE1LTRlZjQtOWRhMi1lMWJiM2E5NjQ0ZTciLCJuYW1laWQiOiIzMzljYmQxYi1iNmRkLTQzOGUtODE1OC0xODIzMjM4NTU3N2EiLCJpc3MiOiJhcHAudnNzcHMudmlzdWFsc3R1ZGlvLmNvbSIsImF1ZCI6ImFwcC52c3Nwcy52aXN1YWxzdHVkaW8uY29tIiwibmJmIjoxNDI0NjA0Mjc3LCJleHAiOjE0NTYxNDAyNzd9.wA1SuhNeUpR_Z69orvtWNFXBf5kslH1n3NW6Gr97YYsnsKuRP3DUzMsLn7fE6V_odMrS8lBUwFjoNKaZ37mS6Cf9ALCTGRAk1m4tpffiNQ4ovpC9Wp0NvpZB1pN_HTSNLO7dlBUs0CPwzRmh75DeI4Ghadr_w5JPrYhAWXQKvvS3bjMyi7ehr3f4rXVCWZt5tDRAFeDB6cLFrCuVv0pewHe86pSb_azJdibjmqeLn20fLRY6n1-n21wyMSl40VRDMHNs1yMBQ9IHsqRZ7Ct6DpXvMt19qkQ3UBeawc11_iZSZhsbSuwn1NlnO_55Dz24D35RAZII7MzM17F8kcgkyw"},
                     {"grant_type", "refresh_token"},
                     {"assertion", refreshToken},
-                    {"redirect_uri", redirectUri}
+                    {"redirect_uri", "https://dotnetconference.local:44300/home/Callback"}
                 };
 
                 var content = new FormUrlEncodedContent(dataDictionary);
 
-                HttpResponseMessage response = client.PostAsync(url, content).Result;
+                HttpResponseMessage response = client.PostAsync("https://app.vssps.visualstudio.com/oauth2/token", content).Result;
 
                 string responseResult = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
-                {
-                    var redisManager = new BasicRedisClientManager("localhost");
-                    using (var redis = redisManager.GetClient())
-                    {
-                        var redisCredentials = redis.As<Auth>();
-                        redisCredentials.FlushAll();
-
-                        var credentialResponse = JsonConvert.DeserializeObject<Auth>(responseResult);
-                        credentialResponse.generationTime = DateTime.UtcNow;
-
-                        redisCredentials.Store(credentialResponse);
-
-                        return credentialResponse;
-                    }
-                }
+                    return SaveAuthInfo(responseResult);
             }
             throw new Exception("Error refreshing token");
         }

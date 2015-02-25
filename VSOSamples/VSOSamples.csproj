@@ -192,6 +192,7 @@
     <Compile Include="Controllers\Demo3.HomeController.cs" />
     <Compile Include="Controllers\Demo2.HomeController.cs" />
     <Compile Include="Controllers\Demo1.HomeController.cs" />
+    <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -290,7 +291,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>14463</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://dotnetconference.local:14463/</IISUrl>
+          <IISUrl>http://localhost:14463/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>
