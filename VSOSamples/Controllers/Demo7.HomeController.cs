@@ -17,24 +17,7 @@ namespace VSOSamples.Controllers
     {
         public async Task<ActionResult> Subscribe()
         {
-            Auth authorizationInfo;
-
-            var redisManager = new BasicRedisClientManager("localhost");
-            using (var redis = redisManager.GetClient())
-            {
-                var redisCredentials = redis.As<Auth>();
-                var credentials = redisCredentials.GetAll();
-                if (credentials.Count == 0)
-                {
-                    RedirectToAction("LogIn");
-                }
-                authorizationInfo = credentials[0];
-            }
-
-            if (authorizationInfo.generationTime.AddSeconds(authorizationInfo.expires_in) < DateTime.UtcNow)
-            {
-                authorizationInfo = RefreshToken(authorizationInfo.refresh_token).Result;
-            }
+            var authorizationInfo = LoadAuthInfo();
 
             using (var client = new HttpClient())
             {

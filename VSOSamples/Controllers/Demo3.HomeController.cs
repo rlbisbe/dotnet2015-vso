@@ -38,6 +38,7 @@ namespace VSOSamples.Controllers
 
                 var content = new FormUrlEncodedContent(dataDictionary);
 
+
                 HttpResponseMessage response = await client.PostAsync("https://app.vssps.visualstudio.com/oauth2/token", content);
 
                 string responseResult = await response.Content.ReadAsStringAsync();
